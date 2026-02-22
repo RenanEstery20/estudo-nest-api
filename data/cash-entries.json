@@ -1,0 +1,11 @@
+[
+  {
+    "id": "1a561730-5eb7-43d4-b304-c8b474ae06c5",
+    "type": "IN",
+    "amount": 3000,
+    "description": "teste",
+    "category": "teste",
+    "paymentMethod": "PIX",
+    "createdAt": "2026-02-21T12:00:00.000Z"
+  }
+]
