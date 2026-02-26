@@ -7,12 +7,14 @@ export type PublicUser = {
   id: string;
   email: string;
   name: string;
+  company: string;
   createdAt: string;
 };
 
 type CreateUserInput = {
   email: string;
   name: string;
+  company: string;
   password: string;
 };
 
@@ -25,8 +27,14 @@ export class UsersService {
       id: user.id,
       email: user.email,
       name: user.name,
+      company: user.company,
       createdAt: user.createdAt.toISOString(),
     };
+  }
+
+  async findById(id: string): Promise<User | undefined> {
+    const user = await this.prisma.user.findUnique({ where: { id } });
+    return user ?? undefined;
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
@@ -43,6 +51,7 @@ export class UsersService {
       data: {
         email: input.email.trim().toLowerCase(),
         name: input.name.trim(),
+        company: input.company.trim(),
         passwordHash,
       },
     });

@@ -14,8 +14,14 @@ import {
 
 type ListFilters = {
   date?: string;
+  dateFrom?: string;
+  dateTo?: string;
   type?: CashEntryType;
   paymentMethod?: CashPaymentMethod;
+  category?: string;
+  description?: string;
+  minAmount?: string;
+  maxAmount?: string;
 };
 
 @Injectable()
@@ -29,6 +35,15 @@ export class CashService {
       throw new BadRequestException('date must be in YYYY-MM-DD format');
     }
     return date;
+  }
+
+  private normalizeNumber(value?: string): number | undefined {
+    if (value === undefined || value === null || value === '') return undefined;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      throw new BadRequestException('amount filters must be valid numbers');
+    }
+    return parsed;
   }
 
   private buildCreatedAt(entryDate?: string): Date {
@@ -59,9 +74,10 @@ export class CashService {
     };
   }
 
-  async create(dto: CreateCashEntryDto) {
+  async create(company: string, dto: CreateCashEntryDto) {
     const entry = await this.prisma.cashEntry.create({
       data: {
+        company,
         type: dto.type as unknown as PrismaCashEntryType,
         paymentMethod: dto.paymentMethod as unknown as PrismaCashPaymentMethod,
         amount: Number(dto.amount),
@@ -74,12 +90,21 @@ export class CashService {
     return this.serializeEntry(entry);
   }
 
-  async findAll(filters: ListFilters = {}) {
+  async findAll(company: string, filters: ListFilters = {}) {
     const date = this.normalizeDate(filters.date);
-    const where: Prisma.CashEntryWhereInput = {};
+    const dateFrom = this.normalizeDate(filters.dateFrom);
+    const dateTo = this.normalizeDate(filters.dateTo);
+    const minAmount = this.normalizeNumber(filters.minAmount);
+    const maxAmount = this.normalizeNumber(filters.maxAmount);
+    const where: Prisma.CashEntryWhereInput = { company };
 
     if (date) {
       where.createdAt = this.buildDayRange(date);
+    } else if (dateFrom || dateTo) {
+      where.createdAt = {
+        ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00.000Z`) } : {}),
+        ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999Z`) } : {}),
+      };
     }
 
     if (filters.type) {
@@ -91,6 +116,27 @@ export class CashService {
         filters.paymentMethod as unknown as PrismaCashPaymentMethod;
     }
 
+    if (filters.category?.trim()) {
+      where.category = {
+        contains: filters.category.trim(),
+        mode: 'insensitive',
+      };
+    }
+
+    if (filters.description?.trim()) {
+      where.description = {
+        contains: filters.description.trim(),
+        mode: 'insensitive',
+      };
+    }
+
+    if (minAmount !== undefined || maxAmount !== undefined) {
+      where.amount = {
+        ...(minAmount !== undefined ? { gte: minAmount } : {}),
+        ...(maxAmount !== undefined ? { lte: maxAmount } : {}),
+      };
+    }
+
     const items = await this.prisma.cashEntry.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -99,18 +145,21 @@ export class CashService {
     return items.map((item) => this.serializeEntry(item));
   }
 
-  async remove(id: string) {
-    try {
-      await this.prisma.cashEntry.delete({ where: { id } });
-      return { deleted: true };
-    } catch {
+  async remove(company: string, id: string) {
+    const result = await this.prisma.cashEntry.deleteMany({
+      where: { id, company },
+    });
+
+    if (result.count === 0) {
       throw new NotFoundException('Cash entry not found');
     }
+
+    return { deleted: true };
   }
 
-  async getDailySummary(date?: string) {
+  async getDailySummary(company: string, date?: string) {
     const targetDate = this.normalizeDate(date) ?? new Date().toISOString().slice(0, 10);
-    const entries = await this.findAll({ date: targetDate });
+    const entries = await this.findAll(company, { date: targetDate });
 
     const totals = entries.reduce(
       (acc, entry) => {
