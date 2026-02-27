@@ -1,5 +1,6 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -16,6 +17,8 @@ async function bootstrap() {
   ];
 
   app.setGlobalPrefix('api');
+  app.use(json({ limit: process.env.BODY_LIMIT ?? '10mb' }));
+  app.use(urlencoded({ extended: true, limit: process.env.BODY_LIMIT ?? '10mb' }));
   app.enableCors({
     origin: (origin, callback) => {
       // Allow non-browser tools like Postman or server-to-server requests.

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -12,6 +13,7 @@ import {
 import { JwtAuthGuard, type AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { CashService } from './cash.service';
 import { CreateCashEntryDto } from './dto/create-cash-entry.dto';
+import { ScanReceiptDto } from './dto/scan-receipt.dto';
 import { CashEntryType, CashPaymentMethod } from './entities/cash-entry.entity';
 
 @Controller('cash-entries')
@@ -22,6 +24,15 @@ export class CashEntriesController {
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateCashEntryDto) {
     return this.cashService.create(req.user.company, dto);
+  }
+
+  @Post('scan-receipt')
+  scanReceipt(@Req() req: AuthenticatedRequest, @Body() dto: ScanReceiptDto) {
+    if (!dto.base64Image) {
+      throw new BadRequestException('base64Image is required');
+    }
+
+    return this.cashService.scanReceipt(req.user.company, dto);
   }
 
   @Get()
