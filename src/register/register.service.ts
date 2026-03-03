@@ -7,9 +7,17 @@ export class RegisterService {
   constructor(private readonly usersService: UsersService) {}
 
   async register(dto: RegisterDto) {
-    const existing = await this.usersService.findByEmail(dto.email);
-    if (existing) {
+    const [existingEmail, existingCompany] = await Promise.all([
+      this.usersService.findByEmail(dto.email),
+      this.usersService.findByCompany(dto.company),
+    ]);
+
+    if (existingEmail) {
       throw new ConflictException('Email already registered');
+    }
+
+    if (existingCompany) {
+      throw new ConflictException('Company already registered');
     }
 
     const user = await this.usersService.createUser(dto);

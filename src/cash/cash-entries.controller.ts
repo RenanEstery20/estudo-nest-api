@@ -1,19 +1,7 @@
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard, type AuthenticatedRequest } from '../auth/jwt-auth.guard';
 import { CashService } from './cash.service';
 import { CreateCashEntryDto } from './dto/create-cash-entry.dto';
-import { ScanReceiptDto } from './dto/scan-receipt.dto';
 import { CashEntryType, CashPaymentMethod } from './entities/cash-entry.entity';
 
 @Controller('cash-entries')
@@ -24,15 +12,6 @@ export class CashEntriesController {
   @Post()
   create(@Req() req: AuthenticatedRequest, @Body() dto: CreateCashEntryDto) {
     return this.cashService.create(req.user.company, dto);
-  }
-
-  @Post('scan-receipt')
-  scanReceipt(@Req() req: AuthenticatedRequest, @Body() dto: ScanReceiptDto) {
-    if (!dto.base64Image) {
-      throw new BadRequestException('base64Image is required');
-    }
-
-    return this.cashService.scanReceipt(req.user.company, dto);
   }
 
   @Get()
@@ -58,6 +37,36 @@ export class CashEntriesController {
       description,
       minAmount,
       maxAmount,
+    });
+  }
+
+  @Get('paginated')
+  findPaginated(
+    @Req() req: AuthenticatedRequest,
+    @Query('date') date?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+    @Query('type') type?: CashEntryType,
+    @Query('paymentMethod') paymentMethod?: CashPaymentMethod,
+    @Query('category') category?: string,
+    @Query('description') description?: string,
+    @Query('minAmount') minAmount?: string,
+    @Query('maxAmount') maxAmount?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return this.cashService.findPaginated(req.user.company, {
+      date,
+      dateFrom,
+      dateTo,
+      type,
+      paymentMethod,
+      category,
+      description,
+      minAmount,
+      maxAmount,
+      page,
+      pageSize,
     });
   }
 

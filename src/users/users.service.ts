@@ -44,6 +44,19 @@ export class UsersService {
     return user ?? undefined;
   }
 
+  async findByCompany(company: string): Promise<User | undefined> {
+    const normalizedCompany = company.trim();
+    const user = await this.prisma.user.findFirst({
+      where: {
+        company: {
+          equals: normalizedCompany,
+          mode: 'insensitive',
+        },
+      },
+    });
+    return user ?? undefined;
+  }
+
   async createUser(input: CreateUserInput): Promise<PublicUser> {
     const passwordHash = await bcrypt.hash(input.password, 10);
 
